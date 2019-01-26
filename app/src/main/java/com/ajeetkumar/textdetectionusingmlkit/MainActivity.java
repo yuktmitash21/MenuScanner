@@ -179,7 +179,11 @@ public class MainActivity extends AppCompatActivity {
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		takeScreenshot();
+		if(item.getTitle().equals("Screenshot")) {
+			takeScreenshot();
+		} else {
+			//implement this part with the freeze picture and send
+		}
 		return true;
 	}
 

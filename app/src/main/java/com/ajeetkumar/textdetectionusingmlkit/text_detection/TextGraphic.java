@@ -85,8 +85,8 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
     private static int hits = 0;
 
-    private static final String APP_ID = "040c9ef4";
-    private static final String APPLICATION_KEY= "23a30793b0e32fcc497acd75c4762afc";
+    private static final String APP_ID = "7f1c1020";
+    private static final String APPLICATION_KEY= "ade6643855503efc3b3184bf6b6ea308";
 
 
     private static final HashSet<String> Vegan = new HashSet<>(Arrays.asList("chicken", "bacon",
