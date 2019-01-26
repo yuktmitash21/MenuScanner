@@ -23,6 +23,7 @@ import com.google.firebase.FirebaseApp;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 
@@ -39,6 +40,9 @@ public class MainActivity extends AppCompatActivity {
 	private HashSet<String> dietRestrictions;
 	private HashSet<String> dietHabits;
 
+	private ArrayList<String> rest;
+	private ArrayList<String> hab;
+
 	//endregion
 
 	@Override
@@ -46,12 +50,19 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		hab = getIntent().getStringArrayListExtra("habits");
+		rest = getIntent().getStringArrayListExtra("restrictions");
 
-		dietHabits = new HashSet<>();
-		dietRestrictions = new HashSet<>();
 
-		//FirebaseApp.initializeApp(this);
-		final String[] restrictions = {"Vegan", "Vegetarian", "Gluten-Free", "Kosher", "Nut Allergy", "None"};
+
+
+		dietHabits = new HashSet<>(hab);
+		dietRestrictions = new HashSet<>(rest);
+
+
+
+
+		/*final String[] restrictions = {"Vegan", "Vegetarian", "Gluten-Free", "Kosher", "Nut Allergy", "None"};
 		AlertDialog.Builder builder;
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			builder = new AlertDialog.Builder(MainActivity.this, android.R.style.Theme_Material_Dialog_Alert);
@@ -90,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
 				}).show();
 
 			}
-		}).show();
+		}).show();*/
 
 
 

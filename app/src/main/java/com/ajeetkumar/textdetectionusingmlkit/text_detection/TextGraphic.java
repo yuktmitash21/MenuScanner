@@ -31,8 +31,16 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -44,36 +52,41 @@ import java.util.List;
  */
 public class TextGraphic extends GraphicOverlay.Graphic {
 
-  private static final int TEXT_COLOR = Color.WHITE;
-  private static final float TEXT_SIZE = 54.0f;
-  private static final float STROKE_WIDTH = 4.0f;
+    private static final int TEXT_COLOR = Color.WHITE;
+    private static final float TEXT_SIZE = 54.0f;
+    private static final float STROKE_WIDTH = 4.0f;
 
-  private final Paint rectPaint;
-  private final Paint textPaint;
-  private final List<FirebaseVisionText.TextBlock> textBlock;
-  private RequestQueue mQueue;
+    private final Paint rectPaint;
+    private final Paint textPaint;
+    private final List<FirebaseVisionText.TextBlock> textBlock;
+    private RequestQueue mQueue;
 
-  private int responseCalories;
-  private int responseCarbs;
-  private int resppnseFat;
+    private static int responseCalories;
+    private static int responseCarbs;
+    private static int resppnseFat;
 
-  private String responseString;
-  private String newName;
-  private ArrayList<Food> allFoods;
+    private static String responseString;
+    private String newName;
+    private ArrayList<Food> allFoods;
 
-  private HashSet<String> restrictions;
-  private HashSet<String> styles;
-  private String importance;
-  private Food bestFood;
+    private HashSet<String> restrictions;
+    private HashSet<String> styles;
+    private String importance;
+    private Food bestFood;
 
-  private int numberOfLegitimateFoods = 0;
-  private int lowest = 0;
+    private int numberOfLegitimateFoods = 0;
+    private int lowest = 0;
 
-  private JsonObjectRequest jsonObjectRequest;
-  private JsonObjectRequest jsonObjectRequest1;
+    private JsonObjectRequest jsonObjectRequest;
+    private JsonObjectRequest jsonObjectRequest1;
 
-  private int idRequests = 0;
-  private int nutrition = 0;
+    private int idRequests = 0;
+    private int nutrition = 0;
+
+    private static int hits = 0;
+
+    private static final String APP_ID = "040c9ef4";
+    private static final String APPLICATION_KEY= "23a30793b0e32fcc497acd75c4762afc";
 
 
     private static final HashSet<String> Vegan = new HashSet<>(Arrays.asList("chicken", "bacon",
@@ -97,284 +110,390 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
 
 
-  TextGraphic(GraphicOverlay overlay, List<FirebaseVisionText.TextBlock> textBlock, HashSet<String> restrictions,
-              HashSet<String> styles) {
-    super(overlay);
+    TextGraphic(GraphicOverlay overlay, List<FirebaseVisionText.TextBlock> textBlock, HashSet<String> restrictions,
+                HashSet<String> styles) {
+        super(overlay);
 
-    mQueue = Volley.newRequestQueue(getApplicationContext());
-    this.restrictions = restrictions;
-    this.styles = styles;
+        mQueue = Volley.newRequestQueue(getApplicationContext());
+        this.restrictions = restrictions;
+        this.styles = styles;
 
-    this.textBlock = textBlock;
-    allFoods = new ArrayList<>();
+        this.textBlock = textBlock;
+        allFoods = new ArrayList<>();
 
-    rectPaint = new Paint();
-    rectPaint.setColor(TEXT_COLOR);
-    rectPaint.setStyle(Paint.Style.STROKE);
-    rectPaint.setStrokeWidth(STROKE_WIDTH);
+        rectPaint = new Paint();
+        rectPaint.setColor(TEXT_COLOR);
+        rectPaint.setStyle(Paint.Style.STROKE);
+        rectPaint.setStrokeWidth(STROKE_WIDTH);
 
-    textPaint = new Paint();
-    textPaint.setColor(TEXT_COLOR);
-    textPaint.setTextSize(TEXT_SIZE);
-    // Redraw the overlay, as this graphic has been added.
-    postInvalidate();
-  }
-
-  /** Draws the text block annotations for position, size, and raw value on the supplied canvas. */
-  @Override
-  public void draw(final Canvas canvas) {
-    if (textBlock == null) {
-      throw new IllegalStateException("Attempting to draw a null text.");
+        textPaint = new Paint();
+        textPaint.setColor(TEXT_COLOR);
+        textPaint.setTextSize(TEXT_SIZE);
+        // Redraw the overlay, as this graphic has been added.
+        postInvalidate();
     }
 
-    if (styles.contains("Low-Carb")) {
-        importance = "carb";
-    } else {
-        importance = "fat";
-    }
+    /** Draws the text block annotations for position, size, and raw value on the supplied canvas. */
+    @Override
+    public void draw(final Canvas canvas) {
+        if (textBlock == null) {
+            throw new IllegalStateException("Attempting to draw a null text.");
+        }
 
+        if (styles.contains("Atkins")) {
+            importance = "carb";
+        } else {
+            importance = "fat";
+        }
 
-      for (int i = 0; i < textBlock.size(); i ++) {
-          FirebaseVisionText.TextBlock block = textBlock.get(i);
-          final FirebaseVisionText.Line text = block.getLines().get(0);
-          if (text.getElements().size() <= 4 && check(text.getElements())) {
-              final String fooodN = text.getText();
-          RectF rect1 = new RectF(text.getBoundingBox());
-          rect1.left = translateX(rect1.left);
-          rect1.top = translateY(rect1.top);
-          rect1.right = translateX(rect1.right);
-          rect1.bottom = translateY(rect1.bottom);
-          String url = "https://api.nutritionix.com/v1_1/search/" + fooodN + "?results=0%3A20&cal_min=0&cal_max=10000&fields=item_name%2Cbrand_name%2Citem_id%2Cbrand_id&appId=293b66a8&appKey=96a63f97a66ab185327dc137a302cad3&format.json";
-          new myAsyncTask().execute(url);
+        for (int i = 0; i < textBlock.size(); i++) {
+            FirebaseVisionText.TextBlock block = textBlock.get(i);
+            final FirebaseVisionText.Line text = block.getLines().get(0);
+            if (text.getElements().size() <= 4 && check(text.getElements())) {
+                final String fooodN = text.getText();
+                RectF rect1 = new RectF(text.getBoundingBox());
+                rect1.left = translateX(rect1.left);
+                rect1.top = translateY(rect1.top);
+                rect1.right = translateX(rect1.right);
+                rect1.bottom = translateY(rect1.bottom);
+                String url = "https://api.nutritionix.com/v1_1/search/" + fooodN + "?results=0%3A20&cal_min=0&cal_max=10000&fields=item_name%2Cbrand_name%2Citem_id%2Cbrand_id&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY +"&format.json";
+                initialRequest(url);
+                if (hits > 0) {
+                String otherURL = "https://api.nutritionix.com/v1_1/item?id=" + responseString + "&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY;
+                secondCall(otherURL);
+                Food food1 = new Food(fooodN, responseCalories, resppnseFat, responseCarbs, rect1, null);
+                food1.setEdible(testIfEdible(food1));
+                if (numberOfLegitimateFoods == 0 && food1.isEdible()) {
+                    numberOfLegitimateFoods++;
+                    if (importance.equals("carb")) {
+                        lowest = food1.getCarbs();
+                        bestFood = food1;
+                    } else {
+                        lowest = food1.getFat();
+                        bestFood = food1;
+                    }
+                } else {
+                    if (importance.equals("carb")) {
+                        if (food1.getCarbs() < lowest && food1.isEdible()) {
+                            bestFood = food1;
+                            lowest = food1.getCarbs();
+                        }
+                    } else {
+                        if (food1.getFat() < lowest && food1.isEdible()) {
+                            lowest = food1.getFat();
+                            bestFood = food1;
+                        }
+                    }
 
-          Food food1 = new Food(text.getText(), responseCalories, resppnseFat, responseCarbs, rect1, null);
-          food1.setEdible(testIfEdible(food1));
-          if (numberOfLegitimateFoods == 0 && food1.isEdible()) {
-              numberOfLegitimateFoods++;
-              if (importance.equals("carb")) {
-                  lowest = food1.getCarbs();
-                  bestFood = food1;
-              } else {
-                  lowest = food1.getFat();
-                  bestFood = food1;
-              }
-          } else {
-              if (importance.equals("carb")) {
-                  if (food1.getCarbs() < lowest && food1.isEdible()) {
-                      bestFood = food1;
-                      lowest = food1.getCarbs();
-                  }
-              } else {
-                  if (food1.getFat() < lowest && food1.isEdible()) {
-                      lowest = food1.getFat();
-                      bestFood = food1;
-                  }
-              }
-
-          }
-          allFoods.add(food1);
-
-
-
-
-
-       String mYUrl = "https://api.nutritionix.com/v1_1/search/" + fooodN + "?results=0%3A20&cal_min=0&cal_max=10000&fields=item_name%2Cbrand_name%2Citem_id%2Cbrand_id&appId=293b66a8&appKey=96a63f97a66ab185327dc137a302cad3&format.json";
-        /*jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url,
-                null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    idRequests++;
-                    Log.d("FIRST REQUEST", "MAKING A REQUEST");
-                    responseString = response.getJSONArray("hits").getJSONObject(0).getJSONObject("fields").getString("item_id");
-                    String otherURL = "https://api.nutritionix.com/v1_1/item?id=" + responseString + "&appId=293b66a8&appKey=96a63f97a66ab185327dc137a302cad3";
-                    final int hits = response.getInt("total_hits");
-                        jsonObjectRequest1 = new JsonObjectRequest(Request.Method.GET, otherURL, null, new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                nutrition++;
-                                Log.d("SECOND REQUEST", "MAKING A REQUEST");
-                                try {
-                                    responseCalories = response.getInt("nf_calories");
-                                    responseCarbs = response.getInt("nf_total_carbohydrate");
-                                    resppnseFat = response.getInt("nf_total_fat");
-                                    Log.d(fooodN, responseCalories + "");
-                                }
-                                catch (Exception e) {
-                                    nutrition++;
-                                    Log.d("ERRORGETTINGCAL", e.getMessage());
-                                }
-
-                            }
-                        }, new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-                                idRequests++;
-                                error.printStackTrace();
-
-                            }
-                        });
-                        mQueue.add(jsonObjectRequest1);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
+                allFoods.add(food1);
 
 
+                }
             }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                error.printStackTrace();
 
+        }
+
+
+
+
+
+
+
+
+
+        for (Food food: allFoods) {
+            String text;
+            RectF rect = food.getBoundingBox();
+            if (food.equals(bestFood)) {
+                text = "HEALTHIEST OPTION: " + food.getName();
+                rect.right = rect.right + (rect.right - rect.left);
+            } else {
+                text = food.getName();
             }
-        });
-        mQueue.add(jsonObjectRequest);*/
+            if (food.isEdible()) {
+                rectPaint.setColor(Color.BLUE);
+                rectPaint.setStyle(Paint.Style.FILL);
+            } else {
+                rectPaint.setColor(Color.RED);
+                rectPaint.setStyle(Paint.Style.FILL);
+            }
+            canvas.drawRect(rect, rectPaint);
+            canvas.drawText(text, rect.left, rect.bottom, textPaint);
 
 
-          }
-              //canvas.drawRect(rect, rectPaint);
+            RectF otherRect = rect;
+            float diff = rect.bottom - rect.top;
+            otherRect.top = rect.top + diff;
+            otherRect.bottom = rect.bottom + diff;
+            rectPaint.setColor(Color.BLACK);
+            canvas.drawRect(otherRect, rectPaint);
 
 
-              // Renders the text at the bottom of the box.//canvas.drawText(text.getText(), rect.left, rect.bottom, textPaint);
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Calories: " + food.getCalories(), otherRect.left, otherRect.bottom, textPaint);
+            textPaint.setColor(Color.WHITE); //do at the end of loop
 
-      }
+            RectF carbRect = otherRect;
+            carbRect.top = carbRect.top + diff;
+            carbRect.bottom = carbRect.bottom + diff;
+            canvas.drawRect(otherRect, rectPaint);
 
-      for (Food food: allFoods) {
-          String text;
-          RectF rect = food.getBoundingBox();
-          if (food.equals(bestFood)) {
-              text = "HEALTHIEST OPTION: " + food.getName();
-              rect.right = rect.right + (rect.right - rect.left);
-          } else {
-              text = food.getName();
-          }
-          if (food.isEdible()) {
-              rectPaint.setColor(Color.BLUE);
-              rectPaint.setStyle(Paint.Style.FILL);
-          } else {
-              rectPaint.setColor(Color.RED);
-              rectPaint.setStyle(Paint.Style.FILL);
-          }
-          canvas.drawRect(rect, rectPaint);
-          canvas.drawText(text, rect.left, rect.bottom, textPaint);
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Carbs: " + food.getCarbs(), carbRect.left, carbRect.bottom, textPaint);
 
 
-          RectF otherRect = rect;
-          float diff = rect.bottom - rect.top;
-          otherRect.top = rect.top + diff;
-          otherRect.bottom = rect.bottom + diff;
-          rectPaint.setColor(Color.BLACK);
-          canvas.drawRect(otherRect, rectPaint);
+            RectF fatRect = carbRect;
+            fatRect.top = fatRect.top + diff;
+            fatRect.bottom = fatRect.bottom + diff;
+            canvas.drawRect(fatRect, rectPaint);
 
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Fat: " + food.getCarbs(), fatRect.left, fatRect.bottom, textPaint);
 
-          textPaint.setColor(Color.RED);
-          canvas.drawText("Calories: " + food.getCalories(), otherRect.left, otherRect.bottom, textPaint);
-          textPaint.setColor(Color.WHITE); //do at the end of loop
-
-          RectF carbRect = otherRect;
-          carbRect.top = carbRect.top + diff;
-          carbRect.bottom = carbRect.bottom + diff;
-          canvas.drawRect(otherRect, rectPaint);
-
-          textPaint.setColor(Color.RED);
-          canvas.drawText("Carbs: " + food.getCarbs(), carbRect.left, carbRect.bottom, textPaint);
-
-
-          RectF fatRect = carbRect;
-          fatRect.top = fatRect.top + diff;
-          fatRect.bottom = fatRect.bottom + diff;
-          canvas.drawRect(fatRect, rectPaint);
-
-          textPaint.setColor(Color.RED);
-          canvas.drawText("Fat: " + food.getCarbs(), fatRect.left, fatRect.bottom, textPaint);
-
-          textPaint.setColor(Color.WHITE);
-      }
+            textPaint.setColor(Color.WHITE);
+        }
 
 
 
 
 
 
-  }
+    }
 
 
     private boolean testIfEdible(Food food) {
-      if (restrictions.contains("None")) {
-          return true;
-      }
+        if (restrictions.contains("None")) {
+            return true;
+        }
         String[] words = food.getName().toLowerCase().split(" ");
 
 
-      for (String word: words) {
-          if (restrictions.contains("Vegan")) {
-              if (Vegan.contains(word)) {
-                  return false;
-              }
-          }
-          if (restrictions.contains("Vegetarian")) {
-              if (Vegetarian.contains(word)) {
-                  return false;
-              }
+        for (String word: words) {
+            if (restrictions.contains("Vegan")) {
+                if (Vegan.contains(word)) {
+                    return false;
+                }
+            }
+            if (restrictions.contains("Vegetarian")) {
+                if (Vegetarian.contains(word)) {
+                    return false;
+                }
 
-          }
-          if (restrictions.contains("Gluten-Free")) {
-              if (gluten.contains(word)) {
-                  return false;
-              }
+            }
+            if (restrictions.contains("Gluten-Free")) {
+                if (gluten.contains(word)) {
+                    return false;
+                }
 
-          }
-          if (restrictions.contains("Kosher")) {
-              if (kosher.contains(word)) {
-                  return false;
-              }
+            }
+            if (restrictions.contains("Kosher")) {
+                if (kosher.contains(word)) {
+                    return false;
+                }
 
-          }
-          if (restrictions.contains("Nut Allergy")) {
-              if (nuts.contains(word)) {
-                  return false;
-              }
+            }
+            if (restrictions.contains("Nut Allergy")) {
+                if (nuts.contains(word)) {
+                    return false;
+                }
 
-          }
-      }
-      return true;
+            }
+        }
+        return true;
 
 
     }
 
     private boolean check(List<FirebaseVisionText.Element> elements) {
-      for (FirebaseVisionText.Element element: elements) {
-          char[] myCharArray = element.getText().toCharArray();
-          for (Character c : myCharArray) {
-              if (!Character.isAlphabetic(c)) {
-                 return false;
-              }
-          }
-      }
-      return true;
+        for (FirebaseVisionText.Element element: elements) {
+            char[] myCharArray = element.getText().toCharArray();
+            for (Character c : myCharArray) {
+                if (!Character.isAlphabetic(c)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
-    public static class myAsyncTask extends AsyncTask<String, Void, String[]> {
+    public static class myAsyncTask extends AsyncTask<String, Void, int[]> {
+
 
         @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+        protected int[] doInBackground(String... strings) {
+            try {
+                URL urlObj = new URL(strings[0]);
+                HttpURLConnection con = (HttpURLConnection) urlObj.openConnection();
+                con.setRequestMethod("GET");
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                String inputline;
+                StringBuffer response = new StringBuffer();
+                while ((inputline = in.readLine()) != null) {
+                    response.append(inputline);
+                }
+                in.close();
+                JSONObject myResponse = new JSONObject(response.toString());
+                responseCalories = myResponse.getInt("nf_calories");
+                Log.d("CALORIES", responseCalories + " ");
+                responseCarbs = myResponse.getInt("nf_total_carbohydrate");
+                resppnseFat = myResponse.getInt("nf_total_fat");
+
+                int[] myStrings = new int[]{responseCalories, responseCarbs, resppnseFat};
+                return myStrings;
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
 
         }
 
         @Override
-        protected String[] doInBackground(String... strings) {
-            
-
-         return null;
+        protected void onPostExecute(int[] ints) {
+            super.onPostExecute(ints);
+            if (ints != null) {
+                int[] x = ints;
+            }
         }
+    }
 
-
+    public static class otherTask extends AsyncTask<String, Void, String> {
 
         @Override
-        protected void onPostExecute(String[] strings) {
-            super.onPostExecute(strings);
+        protected String doInBackground(String... strings) {
+            try {
+                URL urlObj = new URL(strings[0]);
+                HttpURLConnection con = (HttpURLConnection) urlObj.openConnection();
+                con.setRequestMethod("GET");
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                String inputline;
+                StringBuffer response = new StringBuffer();
+                while ((inputline = in.readLine()) != null) {
+                    response.append(inputline);
+                }
+                in.close();
+
+
+                JSONObject myResponse = new JSONObject(response.toString());
+                responseString = myResponse.getJSONArray("hits").getJSONObject(0).getJSONObject("fields").getString("item_id");
+                hits = myResponse.getInt("total_hits");
+                Log.d("HITS", hits + "");
+                Log.d("THISMYID", responseString);
+                if (hits > 0) {
+                    String otherURL = "https://api.nutritionix.com/v1_1/item?id=" + responseString + "&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY;
+                    new myAsyncTask().execute(otherURL);
+                    return responseString;
+                }
+
+
+            } catch (ProtocolException e) {
+
+                Log.d("INITIAL PROTOCOL", e.getLocalizedMessage());
+                return null;
+
+
+            } catch (MalformedURLException f) {
+                Log.d("INITIAL MALFORMED", f.getLocalizedMessage());
+                return null;
+
+            } catch (IOException e) {
+                Log.d("INITIAL IO", e.getLocalizedMessage());
+                return null;
+
+            } catch (JSONException e) {
+                Log.d("INITIAL JSON", e.getLocalizedMessage());
+                return null;
+
+            }
+
+            return responseString;
+
+
         }
+
+
+
+        }
+
+
+
+
+    private void secondCall(final String otherURL) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    URL urlObj = new URL(otherURL);
+                    HttpURLConnection con = (HttpURLConnection) urlObj.openConnection();
+                    con.setRequestMethod("GET");
+                    BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                    String inputline;
+                    StringBuffer response = new StringBuffer();
+                    while ((inputline = in.readLine()) != null) {
+                        response.append(inputline);
+                    }
+                    in.close();
+                    JSONObject myResponse = new JSONObject(response.toString());
+                    responseCalories = myResponse.getInt("nf_calories");
+                    Log.d("CALORIES", responseCalories + " ");
+                    responseCarbs = myResponse.getInt("nf_total_carbohydrate");
+                    resppnseFat = myResponse.getInt("nf_total_fat");
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }).start();
+
+    }
+
+    private void initialRequest(final String url) {
+
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    URL urlObj = new URL(url);
+                    HttpURLConnection con = (HttpURLConnection) urlObj.openConnection();
+                    con.setRequestMethod("GET");
+                    BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                    String inputline;
+                    StringBuffer response = new StringBuffer();
+                    while ((inputline = in.readLine()) != null) {
+                        response.append(inputline);
+                    }
+                    in.close();
+
+
+                    JSONObject myResponse = new JSONObject(response.toString());
+                    responseString = myResponse.getJSONArray("hits").getJSONObject(0).getJSONObject("fields").getString("item_id");
+                    hits = myResponse.getInt("total_hits");
+                    Log.d("HITS", hits + "");
+                    Log.d("THISMYID", responseString);
+
+                } catch (ProtocolException e) {
+                    Log.d("INITIAL PROTOCOL", e.getLocalizedMessage());
+
+
+                } catch (MalformedURLException f) {
+                    Log.d("INITIAL MALFORMED", f.getLocalizedMessage());
+
+                } catch (IOException e) {
+                    Log.d("INITIAL IO", e.getLocalizedMessage());
+
+                } catch (JSONException e) {
+                    Log.d("INITIAL JSON", e.getLocalizedMessage());
+
+                }
+
+            }
+        }).start();
+
+
     }
 }
