@@ -23,6 +23,7 @@ import android.util.Log;
 
 import com.ajeetkumar.textdetectionusingmlkit.Food;
 import com.ajeetkumar.textdetectionusingmlkit.FoodRequest;
+import com.ajeetkumar.textdetectionusingmlkit.keyHolder;
 import com.ajeetkumar.textdetectionusingmlkit.others.GraphicOverlay;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -86,8 +87,12 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
     private static int hits = 0;
 
-    private static final String APP_ID = "d7e1a68c";
-    private static final String APPLICATION_KEY =  "338580ed53adf81812525bff28695f34";
+    private static final String APP_ID = new keyHolder().APP_ID;
+    private static final String APPLICATION_KEY =  new keyHolder().APPLICATION_KEY;
+
+
+   /* private static final String APP_ID = "31e4afb5";
+    private static final String APPLICATION_KEY =  "259bb900d5b359c0c795f9941221836d";*/
 
 
     private static final HashSet<String> Vegan = new HashSet<>(Arrays.asList("chicken", "bacon",
@@ -267,7 +272,6 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
 
 
-
        /* for (Food food: allFoods) {
             String text;
             RectF rect = food.getBoundingBox();
@@ -374,6 +378,10 @@ public class TextGraphic extends GraphicOverlay.Graphic {
                 if (shellfish.contains(word)) {
                     return false;
                 }
+            }
+
+            if (word.contains("lor")) {
+                return false;
             }
         }
         return true;

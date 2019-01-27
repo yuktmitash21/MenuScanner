@@ -20,8 +20,13 @@ import java.net.ProtocolException;
 import java.net.URL;
 
 public class FoodRequest extends AsyncTask<String, Void, Food> {
-    private static final String APP_ID = "d7e1a68c";
-    private static final String APPLICATION_KEY = "338580ed53adf81812525bff28695f34";
+    /*private static final String APP_ID = "31e4afb5";
+    private static final String APPLICATION_KEY = "259bb900d5b359c0c795f9941221836d";*/
+
+
+    private static final String APP_ID = new keyHolder().APP_ID;
+    private static final String APPLICATION_KEY =  new keyHolder().APPLICATION_KEY;
+
     private static final int MINIMUM_HITS = 0;
     private RectF rectF;
 

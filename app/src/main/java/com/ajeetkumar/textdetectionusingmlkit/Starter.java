@@ -7,12 +7,16 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.CardView;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 
 import java.util.ArrayList;
 
 public class Starter extends AppCompatActivity {
     private CardView cardView;
+    private CardView foodFinder;
     private ArrayList<String> dietHabits;
     private ArrayList<String> dietRestrictions;
 
@@ -25,6 +29,7 @@ public class Starter extends AppCompatActivity {
 
 
 
+        foodFinder = findViewById(R.id.foods);
         cardView = findViewById(R.id.cardView);
         cardView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -76,5 +81,19 @@ public class Starter extends AppCompatActivity {
 
             }
         });
+
+        foodFinder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(getApplicationContext(), Meal.class));
+
+            }
+        });
+
+
+
+
     }
+
+
 }
