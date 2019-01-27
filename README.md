@@ -1,1 +1,1 @@
-# Text Detection Using MLKit
+# AR For Restaurant Menus
