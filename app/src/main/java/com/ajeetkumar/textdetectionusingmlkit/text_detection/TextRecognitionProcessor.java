@@ -68,6 +68,10 @@ public class TextRecognitionProcessor {
 	private int lowest = 0;
 	private RequestQueue mQueue;
 
+	private FirebaseVisionText results;
+
+
+
 	private static final String TAG = "TextRecProc";
 
 	private final FirebaseVisionTextRecognizer detector;
@@ -156,6 +160,8 @@ public class TextRecognitionProcessor {
 							@Override
 							public void onSuccess(FirebaseVisionText results) {
 								shouldThrottle.set(false);
+
+								TextRecognitionProcessor.this.results = results;
 								TextRecognitionProcessor.this.onSuccess(results, metadata, graphicOverlay);
 							}
 						})
@@ -172,6 +178,7 @@ public class TextRecognitionProcessor {
 		shouldThrottle.set(true);
 	}
 
-
-
+	public FirebaseVisionText getResults() {
+		return results;
+	}
 }

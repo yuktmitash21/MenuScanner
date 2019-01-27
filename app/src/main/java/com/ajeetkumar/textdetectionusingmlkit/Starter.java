@@ -29,7 +29,7 @@ public class Starter extends AppCompatActivity {
         cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                final String[] restrictions = {"Vegan", "Vegetarian", "Gluten-Free", "Kosher", "Nut Allergy", "None"};
+                final String[] restrictions = {"Vegan", "Vegetarian", "Gluten-Free", "Kosher", "Nut Allergy", "Shellfish", "None"};
                 AlertDialog.Builder builder;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     builder = new AlertDialog.Builder(Starter.this, android.R.style.Theme_Material_Dialog_Alert);

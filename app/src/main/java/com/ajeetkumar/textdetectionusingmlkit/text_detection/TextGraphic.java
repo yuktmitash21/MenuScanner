@@ -22,6 +22,7 @@ import android.text.TextPaint;
 import android.util.Log;
 
 import com.ajeetkumar.textdetectionusingmlkit.Food;
+import com.ajeetkumar.textdetectionusingmlkit.FoodRequest;
 import com.ajeetkumar.textdetectionusingmlkit.others.GraphicOverlay;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -85,8 +86,8 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
     private static int hits = 0;
 
-    private static final String APP_ID = "7f1c1020";
-    private static final String APPLICATION_KEY= "ade6643855503efc3b3184bf6b6ea308";
+    private static final String APP_ID = "d7e1a68c";
+    private static final String APPLICATION_KEY =  "338580ed53adf81812525bff28695f34";
 
 
     private static final HashSet<String> Vegan = new HashSet<>(Arrays.asList("chicken", "bacon",
@@ -107,6 +108,8 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
     private static final HashSet<String> kosher = new HashSet<>(Arrays.asList("bacon", "ham", "pork", "shellfish",
             "crab", "frogeye"));
+
+    private static final HashSet<String> shellfish = new HashSet<String>(Arrays.asList("Shellfish"));
 
 
 
@@ -149,58 +152,59 @@ public class TextGraphic extends GraphicOverlay.Graphic {
         for (int i = 0; i < textBlock.size(); i++) {
             FirebaseVisionText.TextBlock block = textBlock.get(i);
             final FirebaseVisionText.Line text = block.getLines().get(0);
-            if (text.getElements().size() <= 4 && check(text.getElements())) {
+            if (text.getElements().size() <= 3 && check(text.getElements())) {
                 final String fooodN = text.getText();
                 RectF rect1 = new RectF(text.getBoundingBox());
                 rect1.left = translateX(rect1.left);
                 rect1.top = translateY(rect1.top);
                 rect1.right = translateX(rect1.right);
                 rect1.bottom = translateY(rect1.bottom);
-                String url = "https://api.nutritionix.com/v1_1/search/" + fooodN + "?results=0%3A20&cal_min=0&cal_max=10000&fields=item_name%2Cbrand_name%2Citem_id%2Cbrand_id&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY +"&format.json";
-                initialRequest(url);
-                if (hits > 0) {
-                String otherURL = "https://api.nutritionix.com/v1_1/item?id=" + responseString + "&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY;
-                secondCall(otherURL);
-                Food food1 = new Food(fooodN, responseCalories, resppnseFat, responseCarbs, rect1, null);
-                food1.setEdible(testIfEdible(food1));
-                if (numberOfLegitimateFoods == 0 && food1.isEdible()) {
-                    numberOfLegitimateFoods++;
-                    if (importance.equals("carb")) {
-                        lowest = food1.getCarbs();
-                        bestFood = food1;
-                    } else {
-                        lowest = food1.getFat();
-                        bestFood = food1;
-                    }
-                } else {
-                    if (importance.equals("carb")) {
-                        if (food1.getCarbs() < lowest && food1.isEdible()) {
-                            bestFood = food1;
-                            lowest = food1.getCarbs();
+                String f = fooodN.replaceAll(" ", "%20");
+                String url = "https://api.nutritionix.com/v1_1/search/" + f + "?results=0%3A20&cal_min=0&cal_max=10000&fields=item_name%2Cbrand_name%2Citem_id%2Cbrand_id&appId=" + APP_ID + "&appKey=" + APPLICATION_KEY +"&format.json";
+
+                try {
+
+                    Food food = new FoodRequest(rect1).execute(url, fooodN).get();
+                    if (food != null) {
+                        food.setBoundingBox(rect1);
+                        food.setEdible(testIfEdible(food));
+
+                        if (numberOfLegitimateFoods == 0 && food.isEdible()) {
+                            numberOfLegitimateFoods++;
+                            if (importance.equals("carb")) {
+                                lowest = food.getCarbs();
+                                bestFood = food;
+                            } else {
+                                lowest = food.getFat();
+                                bestFood = food;
+                            }
+                        } else {
+                            if (importance.equals("carb")) {
+                                if (food.getCarbs() < lowest && food.isEdible()) {
+                                    bestFood = food;
+                                    lowest = food.getCarbs();
+                                }
+                            } else {
+                                if (food.getFat() < lowest && food.isEdible()) {
+                                    lowest = food.getFat();
+                                    bestFood = food;
+                                }
+                            }
+
                         }
-                    } else {
-                        if (food1.getFat() < lowest && food1.isEdible()) {
-                            lowest = food1.getFat();
-                            bestFood = food1;
-                        }
+                        allFoods.add(food);
                     }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+
+
 
                 }
-                allFoods.add(food1);
 
-
-                }
             }
-
-        }
-
-
-
-
-
-
-
-
 
         for (Food food: allFoods) {
             String text;
@@ -249,7 +253,7 @@ public class TextGraphic extends GraphicOverlay.Graphic {
             canvas.drawRect(fatRect, rectPaint);
 
             textPaint.setColor(Color.RED);
-            canvas.drawText("Fat: " + food.getCarbs(), fatRect.left, fatRect.bottom, textPaint);
+            canvas.drawText("Fat: " + food.getFat(), fatRect.left, fatRect.bottom, textPaint);
 
             textPaint.setColor(Color.WHITE);
         }
@@ -258,6 +262,72 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
 
 
+
+
+
+
+
+
+       /* for (Food food: allFoods) {
+            String text;
+            RectF rect = food.getBoundingBox();
+            if (food.equals(bestFood)) {
+                text = "HEALTHIEST OPTION: " + food.getName();
+                rect.right = rect.right + (rect.right - rect.left);
+            } else {
+                text = food.getName();
+            }
+            if (food.isEdible()) {
+                rectPaint.setColor(Color.BLUE);
+                rectPaint.setStyle(Paint.Style.FILL);
+            } else {
+                rectPaint.setColor(Color.RED);
+                rectPaint.setStyle(Paint.Style.FILL);
+            }
+            canvas.drawRect(rect, rectPaint);
+            canvas.drawText(text, rect.left, rect.bottom, textPaint);
+
+
+            RectF otherRect = rect;
+            float diff = rect.bottom - rect.top;
+            otherRect.top = rect.top + diff;
+            otherRect.bottom = rect.bottom + diff;
+            rectPaint.setColor(Color.BLACK);
+            canvas.drawRect(otherRect, rectPaint);
+
+
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Calories: " + food.getCalories(), otherRect.left, otherRect.bottom, textPaint);
+            textPaint.setColor(Color.WHITE); //do at the end of loop
+
+            RectF carbRect = otherRect;
+            carbRect.top = carbRect.top + diff;
+            carbRect.bottom = carbRect.bottom + diff;
+            canvas.drawRect(otherRect, rectPaint);
+
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Carbs: " + food.getCarbs(), carbRect.left, carbRect.bottom, textPaint);
+
+
+            RectF fatRect = carbRect;
+            fatRect.top = fatRect.top + diff;
+            fatRect.bottom = fatRect.bottom + diff;
+            canvas.drawRect(fatRect, rectPaint);
+
+            textPaint.setColor(Color.RED);
+            canvas.drawText("Fat: " + food.getCarbs(), fatRect.left, fatRect.bottom, textPaint);
+
+            textPaint.setColor(Color.WHITE);*/
+       // }
+
+
+
+
+
+
+    }
+
+    private void drawFood(Food food) {
 
     }
 
@@ -298,6 +368,12 @@ public class TextGraphic extends GraphicOverlay.Graphic {
                     return false;
                 }
 
+            }
+
+            if (restrictions.contains("Shellfish")) {
+                if (shellfish.contains(word)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -415,7 +491,7 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
 
 
-        }
+    }
 
 
 

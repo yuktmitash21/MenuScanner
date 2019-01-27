@@ -19,6 +19,7 @@ import com.ajeetkumar.textdetectionusingmlkit.camera.CameraSourcePreview;
 import com.ajeetkumar.textdetectionusingmlkit.others.GraphicOverlay;
 import com.ajeetkumar.textdetectionusingmlkit.text_detection.TextRecognitionProcessor;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.ml.vision.text.FirebaseVisionText;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
 	private ArrayList<String> rest;
 	private ArrayList<String> hab;
 
+	private TextRecognitionProcessor myTextRecognizer;
+
 	//endregion
 
 	@Override
@@ -52,12 +55,9 @@ public class MainActivity extends AppCompatActivity {
 
 		hab = getIntent().getStringArrayListExtra("habits");
 		rest = getIntent().getStringArrayListExtra("restrictions");
-
-
-
-
 		dietHabits = new HashSet<>(hab);
 		dietRestrictions = new HashSet<>(rest);
+
 
 
 
@@ -149,8 +149,10 @@ public class MainActivity extends AppCompatActivity {
 			cameraSource = new CameraSource(this, graphicOverlay);
 			cameraSource.setFacing(CameraSource.CAMERA_FACING_BACK);
 		}
+        myTextRecognizer = new TextRecognitionProcessor(dietRestrictions, dietHabits);
+		cameraSource.setMachineLearningFrameProcessor(myTextRecognizer);
 
-		cameraSource.setMachineLearningFrameProcessor(new TextRecognitionProcessor(dietRestrictions, dietHabits));
+
 	}
 
 	private void startCameraSource() {
@@ -163,6 +165,10 @@ public class MainActivity extends AppCompatActivity {
 					Log.d(TAG, "resume: graphOverlay is null");
 				}
 				preview.start(cameraSource, graphicOverlay);
+				FirebaseVisionText text = myTextRecognizer.getResults();
+				if (text != null) {
+					Log.d("DOES WORK", text.toString());
+				}
 			} catch (IOException e) {
 				Log.e(TAG, "Unable to start camera source.", e);
 				cameraSource.release();
